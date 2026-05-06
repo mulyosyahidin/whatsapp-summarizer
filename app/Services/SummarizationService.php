@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Ai\Agents\Summarizer;
+use App\Models\AiLog;
 use App\Models\Chat;
 use App\Models\ChatSummary;
+use Illuminate\Support\Facades\Auth;
 
 class SummarizationService
 {
@@ -23,18 +25,39 @@ class SummarizationService
             return null;
         }
 
+        $isGroup = str_ends_with($chat->jid, '@g.us');
+
         $payload = $messages->map(fn ($m) => [
-            'sender' => $m->is_from_me ? 'Me' : ($m->sender_jid ?: 'Contact'),
+            'sender' => $m->is_from_me ? 'Me' : ($isGroup ? explode('@', $m->sender_jid)[0] : 'User'),
             'content' => $m->content,
-            'timestamp' => $m->timestamp?->format('Y-m-d H:i'),
+            'timestamp' => $m->timestamp?->format('H:i'),
             'is_from_me' => $m->is_from_me,
         ])->all();
 
-        $result = (new Summarizer($payload))->prompt(
-            'Summarize the conversation in the context.',
-            provider: config('ai.summarizer.provider'),
-            model: config('ai.summarizer.model'),
-        );
+        $result = null;
+        $error = null;
+
+        try {
+            $result = (new Summarizer($payload))->prompt(
+                'Summarize the conversation in the context.',
+                provider: config('ai.summarizer.provider'),
+                model: config('ai.summarizer.model'),
+            );
+        } catch (\Throwable $e) {
+            $error = $e->getMessage();
+        }
+
+        AiLog::create([
+            'user_id' => Auth::id(),
+            'provider' => config('ai.summarizer.provider'),
+            'model' => config('ai.summarizer.model'),
+            'prompt' => json_encode($payload),
+            'response' => $result ? json_encode($result) : null,
+            'tokens_input' => $result?->usage?->promptTokens ?? 0,
+            'tokens_output' => $result?->usage?->completionTokens ?? 0,
+            'status' => $error ? 'failed' : 'success',
+            'error_message' => $error,
+        ]);
 
         $summaryTitle = data_get($result, 'summary_title');
         $summaryResult = data_get($result, 'summary_result');

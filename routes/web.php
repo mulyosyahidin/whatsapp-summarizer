@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiLogController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\ChatSummaryController;
@@ -35,10 +36,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::prefix('jobs')->name('jobs.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\JobController::class, 'index'])->name('index');
-        Route::get('{type}/{id}', [\App\Http\Controllers\JobController::class, 'show'])->name('show');
-        Route::post('retry-all', [\App\Http\Controllers\JobController::class, 'retryAll'])->name('retry-all');
-        Route::post('{id}/retry', [\App\Http\Controllers\JobController::class, 'retry'])->name('retry');
+        Route::get('/', [JobController::class, 'index'])->name('index');
+        Route::get('{type}/{id}', [JobController::class, 'show'])->name('show');
+        Route::post('retry-all', [JobController::class, 'retryAll'])->name('retry-all');
+        Route::post('{id}/retry', [JobController::class, 'retry'])->name('retry');
+    });
+
+    Route::prefix('ai-logs')->name('ai-logs.')->group(function () {
+        Route::get('/', [AiLogController::class, 'index'])->name('index');
+        Route::get('{log}', [AiLogController::class, 'show'])->name('show');
     });
 });
 

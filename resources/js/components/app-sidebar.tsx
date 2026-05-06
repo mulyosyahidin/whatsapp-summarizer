@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Activity, FileText, LayoutGrid, MessageSquare, Users } from 'lucide-react';
+import { Activity, Bot, FileText, LayoutGrid, MessageSquare, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -17,6 +17,7 @@ import chats from '@/routes/chats';
 import contacts from '@/routes/contacts';
 import summaries from '@/routes/summaries';
 import jobs from '@/routes/jobs';
+import aiLogs from '@/routes/ai-logs';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -50,6 +51,11 @@ const systemNavItems: NavItem[] = [
         title: 'Jobs',
         href: jobs.index(),
         icon: Activity,
+    },
+    {
+        title: 'AI Logs',
+        href: aiLogs.index(),
+        icon: Bot,
     },
 ];
 

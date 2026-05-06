@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -91,7 +92,7 @@ class JobController extends Controller
      */
     public function retry(string $id)
     {
-        \Illuminate\Support\Facades\Artisan::call('queue:retry', ['id' => [$id]]);
+        Artisan::call('queue:retry', ['id' => [$id]]);
 
         return back()->with('success', 'Job has been pushed back to the queue.');
     }
@@ -101,7 +102,7 @@ class JobController extends Controller
      */
     public function retryAll()
     {
-        \Illuminate\Support\Facades\Artisan::call('queue:retry', ['id' => ['all']]);
+        Artisan::call('queue:retry', ['id' => ['all']]);
 
         return back()->with('success', 'All failed jobs have been pushed back to the queue.');
     }
