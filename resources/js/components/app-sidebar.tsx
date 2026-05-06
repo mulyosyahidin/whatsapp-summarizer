@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BookOpen, FolderGit2, LayoutGrid, MessageSquare } from 'lucide-react';
+import { BookOpen, FolderGit2, LayoutGrid, MessageSquare, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import chats from '@/routes/chats';
+import contacts from '@/routes/contacts';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -27,6 +28,11 @@ const mainNavItems: NavItem[] = [
         title: 'Chats',
         href: chats.index(),
         icon: MessageSquare,
+    },
+    {
+        title: 'Kontak',
+        href: contacts.index(),
+        icon: Users,
     },
 ];
 
