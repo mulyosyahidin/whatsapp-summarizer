@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, MessageSquare, Users } from 'lucide-react';
+import { FileText, LayoutGrid, MessageSquare, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -15,6 +15,7 @@ import {
 import { dashboard } from '@/routes';
 import chats from '@/routes/chats';
 import contacts from '@/routes/contacts';
+import summaries from '@/routes/summaries';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -23,6 +24,9 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+];
+
+const applicationNavItems: NavItem[] = [
     {
         title: 'Chats',
         href: chats.index(),
@@ -32,6 +36,11 @@ const mainNavItems: NavItem[] = [
         title: 'Kontak',
         href: contacts.index(),
         icon: Users,
+    },
+    {
+        title: 'Ringkasan',
+        href: summaries.index(),
+        icon: FileText,
     },
 ];
 
@@ -52,6 +61,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavMain items={applicationNavItems} label="Application" />
             </SidebarContent>
 
             <SidebarFooter>

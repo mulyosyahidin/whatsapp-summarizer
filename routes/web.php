@@ -25,6 +25,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     });
 
+    Route::get('summaries', [ChatSummaryController::class, 'index'])->name('summaries.index');
+    Route::post('summaries/summarize-all', [ChatSummaryController::class, 'summarizeAll'])->name('summaries.summarize-all');
+
     Route::prefix('contacts')->name('contacts.')->group(function () {
         Route::get('/', [ContactController::class, 'index'])->name('index');
         Route::post('sync', [ContactController::class, 'sync'])->name('sync');

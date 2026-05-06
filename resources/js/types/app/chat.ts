@@ -40,6 +40,7 @@ export interface ChatFile {
 export interface ChatSummary {
     id: number;
     chat_id: number;
+    chat?: Chat;
     summary_title: string | null;
     summary_result: string;
     message_count: number;

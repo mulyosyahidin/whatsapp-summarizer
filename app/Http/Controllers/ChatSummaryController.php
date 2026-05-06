@@ -2,48 +2,68 @@
 
 namespace App\Http\Controllers;
 
-use App\Ai\Agents\Summarizer;
+use App\Http\Resources\ChatSummaryResource;
+use App\Jobs\SummarizeChat;
 use App\Models\Chat;
 use App\Models\ChatSummary;
+use App\Services\SummarizationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class ChatSummaryController extends Controller
 {
+    public function __construct(private readonly SummarizationService $summarizationService) {}
+
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request): Response
+    {
+        $query = ChatSummary::with('chat')->latest();
+
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('summary_title', 'like', "%{$request->search}%")
+                    ->orWhere('summary_result', 'like', "%{$request->search}%")
+                    ->orWhereHas('chat', function ($q) use ($request) {
+                        $q->where('name', 'like', "%{$request->search}%")
+                            ->orWhere('jid', 'like', "%{$request->search}%");
+                    });
+            });
+        }
+
+        return Inertia::render('summaries/index', [
+            'summaries' => ChatSummaryResource::collection($query->paginate($request->input('limit', 10))->withQueryString()),
+            'filters' => $request->only(['search', 'limit']),
+        ]);
+    }
+
+    /**
+     * Generate summaries for all chats in the background.
+     */
+    public function summarizeAll(): RedirectResponse
+    {
+        $chats = Chat::all();
+
+        foreach ($chats as $chat) {
+            SummarizeChat::dispatch($chat);
+        }
+
+        return back()->with('success', 'Proses rangkuman semua chat telah dijadwalkan di background.');
+    }
+
     /**
      * Generate and store an AI summary for the given chat.
      */
     public function store(Request $request, Chat $chat): RedirectResponse
     {
-        $messages = $chat->messages()
-            ->oldest('timestamp')
-            ->whereNotNull('content')
-            ->where('content', '!=', '')
-            ->get(['sender_jid', 'content', 'timestamp', 'is_from_me']);
+        $summary = $this->summarizationService->summarize($chat);
 
-        if ($messages->isEmpty()) {
-            return back()->with('error', 'Tidak ada pesan teks untuk dirangkum.');
+        if (! $summary) {
+            return back()->with('error', 'Gagal merangkum chat. Pastikan ada pesan teks yang cukup atau coba lagi nanti.');
         }
-
-        $payload = $messages->map(fn ($m) => [
-            'sender' => $m->is_from_me ? 'Me' : ($m->sender_jid ?: 'Contact'),
-            'content' => $m->content,
-            'timestamp' => $m->timestamp?->format('Y-m-d H:i'),
-            'is_from_me' => $m->is_from_me,
-        ])->all();
-
-        $result = (new Summarizer($payload))->prompt(
-            'Summarize the conversation in the context.',
-            provider: config('ai.summarizer.provider'),
-            model: config('ai.summarizer.model'),
-        );
-
-        ChatSummary::create([
-            'chat_id' => $chat->id,
-            'summary_title' => data_get($result, 'summary_title'),
-            'summary_result' => data_get($result, 'summary_result'),
-            'message_count' => $messages->count(),
-        ]);
 
         return back()->with('success', 'Ringkasan berhasil dibuat.');
     }
