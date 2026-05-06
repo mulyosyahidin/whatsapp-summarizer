@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { DatabaseZap, ExternalLink, FileText, MessageSquare, RefreshCw, Search, User } from 'lucide-react';
+import { DatabaseZap, Eye, FileText, MessageSquare, RefreshCw, Search, User } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -158,7 +158,7 @@ export default function Index({
                                                 <td className="px-4 py-3 text-right">
                                                     <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" asChild title="Lihat Chat">
                                                         <Link href={chats.show(summary.chat_id).url}>
-                                                            <ExternalLink className="h-4 w-4" />
+                                                            <Eye className="h-4 w-4" />
                                                         </Link>
                                                     </Button>
                                                 </td>

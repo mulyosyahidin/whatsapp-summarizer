@@ -5,6 +5,7 @@ use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\ChatSummaryController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\JobController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -31,6 +32,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('contacts')->name('contacts.')->group(function () {
         Route::get('/', [ContactController::class, 'index'])->name('index');
         Route::post('sync', [ContactController::class, 'sync'])->name('sync');
+    });
+
+    Route::prefix('jobs')->name('jobs.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\JobController::class, 'index'])->name('index');
+        Route::get('{type}/{id}', [\App\Http\Controllers\JobController::class, 'show'])->name('show');
+        Route::post('retry-all', [\App\Http\Controllers\JobController::class, 'retryAll'])->name('retry-all');
+        Route::post('{id}/retry', [\App\Http\Controllers\JobController::class, 'retry'])->name('retry');
     });
 });
 

@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { FileText, LayoutGrid, MessageSquare, Users } from 'lucide-react';
+import { Activity, FileText, LayoutGrid, MessageSquare, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -16,6 +16,7 @@ import { dashboard } from '@/routes';
 import chats from '@/routes/chats';
 import contacts from '@/routes/contacts';
 import summaries from '@/routes/summaries';
+import jobs from '@/routes/jobs';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -44,6 +45,14 @@ const applicationNavItems: NavItem[] = [
     },
 ];
 
+const systemNavItems: NavItem[] = [
+    {
+        title: 'Jobs',
+        href: jobs.index(),
+        icon: Activity,
+    },
+];
+
 export function AppSidebar() {
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -62,6 +71,7 @@ export function AppSidebar() {
             <SidebarContent>
                 <NavMain items={mainNavItems} />
                 <NavMain items={applicationNavItems} label="Application" />
+                <NavMain items={systemNavItems} label="System" />
             </SidebarContent>
 
             <SidebarFooter>
