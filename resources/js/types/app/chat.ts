@@ -34,3 +34,13 @@ export interface ChatFile {
     file_length: number;
     timestamp: string;
 }
+
+export interface ChatSummary {
+    id: number;
+    chat_id: number;
+    summary_title: string | null;
+    summary_result: string;
+    message_count: number;
+    created_at: string;
+    updated_at: string;
+}

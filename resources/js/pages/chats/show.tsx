@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, Download, FileText, RefreshCw, Send, User, Search } from 'lucide-react';
+import { ArrowLeft, Download, FileText, RefreshCw, Sparkles, User, Search } from 'lucide-react';
 import { useState, useDeferredValue, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +15,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import chats from '@/routes/chats';
-import { type Chat, type ChatMessage, type ChatFile, type PaginatedResult } from '@/types';
+import { type Chat, type ChatMessage, type ChatFile, type ChatSummary, type PaginatedResult } from '@/types';
 
 import { toast } from 'sonner';
 
@@ -25,10 +25,12 @@ interface Props {
     files: PaginatedResult<ChatFile>;
     files_count: number;
     filters: { search?: string };
+    latest_summary: ChatSummary | null;
 }
 
-export default function Show({ chat, messages, files, files_count, filters }: Props) {
+export default function Show({ chat, messages, files, files_count, filters, latest_summary }: Props) {
     const [isSyncing, setIsSyncing] = useState(false);
+    const [isSummarizing, setIsSummarizing] = useState(false);
     const [search, setSearch] = useState(filters.search || '');
     const [isFilesDialogOpen, setIsFilesDialogOpen] = useState(false);
     const deferredSearch = useDeferredValue(search);
@@ -56,6 +58,19 @@ export default function Show({ chat, messages, files, files_count, filters }: Pr
         });
     };
 
+    const handleSummarize = () => {
+        setIsSummarizing(true);
+        router.post(chats.summarize(chat.id).url, {}, {
+            onSuccess: () => {
+                toast.success('Ringkasan berhasil dibuat');
+            },
+            onError: () => {
+                toast.error('Gagal membuat ringkasan');
+            },
+            onFinish: () => setIsSummarizing(false),
+        });
+    };
+
     const highlightText = (text: string, highlight: string) => {
         if (!highlight.trim()) return text;
         const regex = new RegExp(`(${highlight})`, 'gi');
@@ -80,7 +95,7 @@ export default function Show({ chat, messages, files, files_count, filters }: Pr
             <Head title={`Chat with ${chat.name || chat.jid}`} />
 
             <div className="flex flex-1 flex-col p-4">
-                <div className="flex h-[calc(100vh-12rem)] gap-4">
+                <div className="flex h-[calc(100vh-12rem)] flex-col gap-4 lg:flex-row">
                     {/* Left Column: Messages */}
                     <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-border bg-background shadow-sm">
                         {/* Header */}
@@ -205,7 +220,7 @@ export default function Show({ chat, messages, files, files_count, filters }: Pr
                     </div>
 
                     {/* Right Column: Chat Detail */}
-                    <aside className="hidden w-80 flex-col gap-4 lg:flex">
+                    <aside className="hidden h-full w-80 shrink-0 flex-col gap-4 overflow-y-auto lg:flex">
                         <div className="rounded-xl border border-border bg-background p-6 shadow-sm">
                             <div className="flex flex-col items-center text-center">
                                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -259,6 +274,58 @@ export default function Show({ chat, messages, files, files_count, filters }: Pr
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                         {/* AI Summary Section */}
+                        <div className="rounded-xl border border-border bg-background p-5 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="flex items-center gap-2">
+                                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Ringkasan AI</p>
+                                </div>
+                                <Button
+                                    id="btn-summarize"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 gap-1.5 rounded-lg text-[10px] px-3"
+                                    onClick={handleSummarize}
+                                    disabled={isSummarizing || messages.meta.total === 0}
+                                >
+                                    <Sparkles className={cn("h-3 w-3", isSummarizing && "animate-pulse")} />
+                                    {isSummarizing ? 'Merangkum...' : 'Summarize'}
+                                </Button>
+                            </div>
+
+                            {latest_summary ? (
+                                <div className="space-y-3">
+                                    {latest_summary.summary_title && (
+                                        <p className="text-xs font-semibold text-foreground leading-snug">
+                                            {latest_summary.summary_title}
+                                        </p>
+                                    )}
+                                    <p className="text-xs leading-relaxed text-muted-foreground">{latest_summary.summary_result}</p>
+                                    <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {latest_summary.message_count} pesan dirangkum
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {new Date(latest_summary.created_at).toLocaleDateString('id-ID', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                            })}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center py-6 text-center">
+                                    <div className="rounded-full bg-muted p-3 mb-3">
+                                        <Sparkles className="h-5 w-5 text-muted-foreground/40" />
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Belum ada ringkasan.</p>
+                                    <p className="text-[10px] text-muted-foreground mt-1">Klik tombol Summarize untuk membuat ringkasan percakapan.</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Recent Files Section */}

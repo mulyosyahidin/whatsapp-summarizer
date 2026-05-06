@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatMessageController;
+use App\Http\Controllers\ChatSummaryController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -14,6 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('chats', ChatController::class)->only(['index', 'show']);
     Route::post('chats/sync', [ChatController::class, 'sync'])->name('chats.sync');
     Route::post('chats/{chat}/sync', [ChatMessageController::class, 'sync'])->name('chats.messages.sync');
+    Route::post('chats/{chat}/summarize', [ChatSummaryController::class, 'store'])->name('chats.summarize');
 });
 
 require __DIR__.'/settings.php';

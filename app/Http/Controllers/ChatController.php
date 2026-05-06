@@ -35,6 +35,7 @@ class ChatController extends Controller
             'files' => ChatFileResource::collection($chat->files()->latest('timestamp')->paginate(10, ['*'], 'files_page')->withQueryString()),
             'files_count' => $chat->files()->count(),
             'filters' => $request->only(['search']),
+            'latest_summary' => $chat->latestSummary,
         ]);
     }
 
@@ -54,7 +55,6 @@ class ChatController extends Controller
             $totalSynced += count($result['data']);
             $pagination = $result['pagination'];
             $offset += $limit;
-
         } while ($offset < $pagination['total']);
 
         return back()->with('success', "Berhasil sinkronisasi {$totalSynced} chat");
