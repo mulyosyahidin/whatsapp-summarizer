@@ -29,7 +29,6 @@ services:
       - APP_DEBUG=true
       - APP_OS=Chrome
       - APP_ACCOUNT_VALIDATION=false
-      - WHATSAPP_WEBHOOK=https://1999-180-250-28-59.ngrok-free.app/whatsapp/callback
 
 networks:
   wa-grab:

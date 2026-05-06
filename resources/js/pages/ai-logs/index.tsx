@@ -10,11 +10,17 @@ import { cn } from '@/lib/utils';
 import type { AiLog } from '@/types/app/ai-log';
 import type { PaginatedResult } from '@/types/inertia';
 
-export default function Index({
-    logs,
-}: {
+interface Props {
     logs: PaginatedResult<AiLog>;
-}) {
+    stats: {
+        models: { model: string; count: number; input_tokens: number; output_tokens: number }[];
+        total_count: number;
+        total_input_tokens: number;
+        total_output_tokens: number;
+    };
+}
+
+export default function Index({ logs, stats }: Props) {
     return (
         <>
             <Head title="AI Request Logs" />
@@ -30,6 +36,45 @@ export default function Index({
                 </header>
 
                 <div className="flex-1 overflow-auto px-4 pb-2 pt-4">
+                    <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="p-4 rounded-xl border border-border bg-card shadow-sm">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Requests</p>
+                            <p className="mt-1 text-3xl font-black text-foreground tracking-tight">{stats.total_count}</p>
+                        </div>
+                        <div className="p-4 rounded-xl border border-border bg-card shadow-sm">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Tokens</p>
+                            <p className="mt-1 text-3xl font-black text-foreground tracking-tight">
+                                {(stats.total_input_tokens + stats.total_output_tokens).toLocaleString()}
+                            </p>
+                            <div className="mt-2 flex gap-4 text-[10px] font-bold uppercase tracking-wider">
+                                <div className="flex flex-col">
+                                    <span className="text-blue-500/80">Input</span>
+                                    <span className="text-foreground">{stats.total_input_tokens.toLocaleString()}</span>
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-purple-500/80">Output</span>
+                                    <span className="text-foreground">{stats.total_output_tokens.toLocaleString()}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="p-4 rounded-xl border border-border bg-card shadow-sm">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Models Distribution</p>
+                            <div className="mt-2 space-y-2 overflow-y-auto max-h-[80px] scrollbar-hide">
+                                {stats.models.map((m) => (
+                                    <div key={m.model} className="flex flex-col gap-0.5 text-[11px] border-b border-border/50 pb-1.5 last:border-0 last:pb-0">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-muted-foreground font-medium truncate max-w-[150px]">{m.model}</span>
+                                            <span className="font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md min-w-[30px] text-center">{m.count}</span>
+                                        </div>
+                                        <div className="flex gap-2 text-[9px] text-muted-foreground/70 font-mono">
+                                            <span>In: {Number(m.input_tokens).toLocaleString()}</span>
+                                            <span>Out: {Number(m.output_tokens).toLocaleString()}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                     {logs.data.length === 0 ? (
                         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/30 py-14 text-center">
                             <Bot className="h-8 w-8 text-muted-foreground/40" />

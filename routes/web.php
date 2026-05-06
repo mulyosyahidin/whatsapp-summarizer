@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AiLogController;
+use App\Http\Controllers\ChatAssistantController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\ChatSummaryController;
@@ -24,7 +25,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('sync-all', [ChatController::class, 'syncAll'])->name('sync-all');
         Route::post('{chat}/sync', [ChatMessageController::class, 'sync'])->name('messages.sync');
         Route::post('{chat}/summarize', [ChatSummaryController::class, 'store'])->name('summarize');
-
+        Route::post('{chat}/ai-chat', [ChatAssistantController::class, 'chat'])->name('ai-chat');
     });
 
     Route::get('summaries', [ChatSummaryController::class, 'index'])->name('summaries.index');
@@ -40,6 +41,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('{type}/{id}', [JobController::class, 'show'])->name('show');
         Route::post('retry-all', [JobController::class, 'retryAll'])->name('retry-all');
         Route::post('{id}/retry', [JobController::class, 'retry'])->name('retry');
+        Route::delete('{type}/{id}', [JobController::class, 'destroy'])->name('destroy');
     });
 
     Route::prefix('ai-logs')->name('ai-logs.')->group(function () {

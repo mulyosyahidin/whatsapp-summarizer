@@ -32,7 +32,12 @@ return [
 
     'summarizer' => [
         'provider' => env('SUMMARIZER_PROVIDER', 'openrouter'),
-        'model' => env('SUMMARIZER_MODEL', 'openai/gpt-oss-120b:free'),
+        'model' => env('SUMMARIZER_MODEL', ''),
+    ],
+
+    'chat_assistant' => [
+        'provider' => env('CHAT_ASSISTANT_PROVIDER', 'openrouter'),
+        'model' => env('CHAT_ASSISTANT_MODEL', ''),
     ],
 
     /*

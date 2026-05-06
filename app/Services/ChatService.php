@@ -143,6 +143,16 @@ class ChatService
     }
 
     /**
+     * Get the total number of messages for a chat from the API.
+     */
+    public function getApiMessagesCount(Chat $chat): int
+    {
+        $result = $this->fetchMessages($chat, 0, 1);
+
+        return $result['pagination']['total'] ?? 0;
+    }
+
+    /**
      * Fetch a page of messages for a chat from the WAG API.
      *
      * @return array{data: array<mixed>, pagination: array<string, mixed>}|null

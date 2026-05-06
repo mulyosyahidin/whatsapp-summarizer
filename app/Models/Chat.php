@@ -57,4 +57,12 @@ class Chat extends Model
     {
         return $this->hasOne(ChatSummary::class)->latestOfMany();
     }
+
+    /**
+     * Get the AI chat messages for the chat.
+     */
+    public function aiChatMessages(): HasMany
+    {
+        return $this->hasMany(AiChatMessage::class);
+    }
 }

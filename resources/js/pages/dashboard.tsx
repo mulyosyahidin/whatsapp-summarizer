@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { MessageSquare, Users, ChevronRight, User, Contact as ContactIcon } from 'lucide-react';
+import { MessageSquare, Users, ChevronRight, User, Contact as ContactIcon, Zap, BarChart3, BrainCircuit, Coins } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { dashboard } from '@/routes';
@@ -13,6 +13,13 @@ interface DashboardProps {
         total_messages: number;
         total_contacts: number;
     };
+    ai_stats: {
+        total_cost: number;
+        total_tokens_input: number;
+        total_tokens_output: number;
+        top_model: string;
+        top_model_usage_count: number;
+    };
     latest_chats: {
         data: Chat[];
     };
@@ -21,7 +28,7 @@ interface DashboardProps {
     };
 }
 
-export default function Dashboard({ stats, latest_chats, latest_contacts }: DashboardProps) {
+export default function Dashboard({ stats, ai_stats, latest_chats, latest_contacts }: DashboardProps) {
     return (
         <>
             <Head title="Dashboard" />
@@ -56,6 +63,54 @@ export default function Dashboard({ stats, latest_chats, latest_contacts }: Dash
                         <CardContent>
                             <div className="text-2xl font-bold text-purple-900 dark:text-purple-50">{stats.total_contacts}</div>
                             <p className="text-xs text-purple-600/80 dark:text-purple-400/80 mt-1">Kontak tersinkronisasi</p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* AI Summary Cards */}
+                <div className="grid gap-4 md:grid-cols-4">
+                    <Card className="shadow-sm border-border/60 bg-muted/20">
+                        <CardHeader className="flex flex-row items-center justify-between pb-1 space-y-0">
+                            <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Total Biaya AI</CardTitle>
+                            <Coins className="h-3.5 w-3.5 text-orange-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-xl font-bold">${Number(ai_stats.total_cost).toFixed(4)}</div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Estimasi biaya OpenRouter</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border-border/60 bg-muted/20">
+                        <CardHeader className="flex flex-row items-center justify-between pb-1 space-y-0">
+                            <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Token In (Prompt)</CardTitle>
+                            <Zap className="h-3.5 w-3.5 text-yellow-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-xl font-bold">{Intl.NumberFormat('en-US', { notation: 'compact' }).format(ai_stats.total_tokens_input)}</div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Total token masuk</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border-border/60 bg-muted/20">
+                        <CardHeader className="flex flex-row items-center justify-between pb-1 space-y-0">
+                            <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Token Out (Compl.)</CardTitle>
+                            <BarChart3 className="h-3.5 w-3.5 text-blue-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-xl font-bold">{Intl.NumberFormat('en-US', { notation: 'compact' }).format(ai_stats.total_tokens_output)}</div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Total token keluar</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-sm border-border/60 bg-muted/20">
+                        <CardHeader className="flex flex-row items-center justify-between pb-1 space-y-0">
+                            <CardTitle className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Top Model</CardTitle>
+                            <BrainCircuit className="h-3.5 w-3.5 text-purple-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-sm font-bold truncate pr-1" title={ai_stats.top_model}>
+                                {ai_stats.top_model.split('/').pop()}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">
+                                Model paling sering digunakan ({ai_stats.top_model_usage_count}x)
+                            </p>
                         </CardContent>
                     </Card>
                 </div>

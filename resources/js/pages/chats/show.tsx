@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, Download, FileText, RefreshCw, Sparkles, User, Search } from 'lucide-react';
-import { useState, useDeferredValue, useEffect } from 'react';
+import { ArrowLeft, Bot, Download, FileText, RefreshCw, Send, Sparkles, User, Search, X, Copy, Check } from 'lucide-react';
+import { useState, useDeferredValue, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/pagination';
@@ -11,6 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogClose,
 } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -18,22 +19,90 @@ import chats from '@/routes/chats';
 import { type Chat, type ChatMessage, type ChatFile, type ChatSummary, type PaginatedResult } from '@/types';
 
 import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface Props {
     chat: Chat;
     messages: PaginatedResult<ChatMessage>;
     files: PaginatedResult<ChatFile>;
     files_count: number;
+    pending_messages_count: number;
     filters: { search?: string };
     latest_summary: ChatSummary | null;
+    ai_messages: { role: 'user' | 'assistant', content: string }[];
 }
 
-export default function Show({ chat, messages, files, files_count, filters, latest_summary }: Props) {
+export default function Show({ chat, messages, files, files_count, pending_messages_count, filters, latest_summary, ai_messages }: Props) {
     const [isSyncing, setIsSyncing] = useState(false);
     const [isSummarizing, setIsSummarizing] = useState(false);
     const [search, setSearch] = useState(filters.search || '');
     const [isFilesDialogOpen, setIsFilesDialogOpen] = useState(false);
+    const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+    const [aiMessages, setAiMessages] = useState<{ role: 'user' | 'assistant', content: string }[]>(
+        ai_messages.length > 0 
+            ? ai_messages 
+            : [{ role: 'assistant', content: 'Halo! Saya asisten AI. Ada yang bisa saya bantu terkait percakapan ini? Anda bisa meminta saya untuk meringkas, mencari informasi tertentu, atau menganalisis sentimen.' }]
+    );
+    const [aiInput, setAiInput] = useState('');
+    const [isAiLoading, setIsAiLoading] = useState(false);
+    const [copiedId, setCopiedId] = useState<string | number | null>(null);
     const deferredSearch = useDeferredValue(search);
+    const aiChatScrollRef = useRef<HTMLDivElement>(null);
+
+    const scrollToBottom = () => {
+        if (aiChatScrollRef.current) {
+            aiChatScrollRef.current.scrollTop = aiChatScrollRef.current.scrollHeight;
+        }
+    };
+
+    const copyToClipboard = (text: string, id: string | number) => {
+        navigator.clipboard.writeText(text).then(() => {
+            setCopiedId(id);
+            toast.success('Disalin ke clipboard');
+            setTimeout(() => setCopiedId(null), 2000);
+        });
+    };
+
+    useEffect(() => {
+        if (isAiChatOpen) {
+            // Use a small timeout to ensure DOM is updated before scrolling
+            setTimeout(scrollToBottom, 50);
+        }
+    }, [aiMessages, isAiLoading, isAiChatOpen]);
+
+    const handleSendAiMessage = async () => {
+        if (!aiInput.trim() || isAiLoading) return;
+
+        const userMessage = aiInput;
+        setAiInput('');
+        setAiMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        setIsAiLoading(true);
+
+        try {
+            const response = await fetch(chats.aiChat(chat.id).url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                },
+                body: JSON.stringify({ message: userMessage }),
+            });
+
+            const data = await response.json();
+            
+            if (data.message) {
+                setAiMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+            } else {
+                toast.error('Gagal mendapatkan respon dari AI.');
+            }
+        } catch (error) {
+            console.error('AI Chat Error:', error);
+            toast.error('Terjadi kesalahan saat menghubungi AI.');
+        } finally {
+            setIsAiLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (deferredSearch !== (filters.search || '')) {
@@ -110,10 +179,17 @@ export default function Show({ chat, messages, files, files_count, filters, late
                                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                                         <User className="h-5 w-5" />
                                     </div>
-                                    <div>
-                                        <h1 className="text-sm font-semibold text-foreground">{chat.name || 'Unknown'}</h1>
-                                        <p className="text-[11px] text-muted-foreground font-mono">{chat.jid}</p>
-                                    </div>
+                                     <div>
+                                         <h1 className="text-sm font-semibold text-foreground">{chat.name || 'Unknown'}</h1>
+                                         <div className="flex items-center gap-2">
+                                             <p className="text-[11px] text-muted-foreground font-mono">{chat.jid}</p>
+                                             {pending_messages_count > 0 && (
+                                                 <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded-full font-medium">
+                                                     {pending_messages_count} pending
+                                                 </span>
+                                             )}
+                                         </div>
+                                     </div>
                                 </div>
                             </div>
 
@@ -170,32 +246,35 @@ export default function Show({ chat, messages, files, files_count, filters, late
                                         >
                                             <div
                                                 className={cn(
-                                                    "max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
+                                                    "group relative max-w-[80%] rounded-2xl px-4 py-2.5 text-sm shadow-sm",
                                                     message.is_from_me
                                                         ? "bg-primary text-primary-foreground rounded-tr-none"
                                                         : "bg-background border border-border text-foreground rounded-tl-none"
                                                 )}
                                             >
-                                                {message.media_type === 'document' ? (
-                                                    <div className="flex items-center gap-3 py-1">
-                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-black/10 dark:bg-white/10">
-                                                            <FileText className="h-5 w-5" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className="truncate font-medium text-xs">{message.filename}</p>
-                                                            <p className="text-[10px] opacity-70">
-                                                                {(message.file_length / 1024 / 1024).toFixed(2)} MB • PDF
-                                                            </p>
-                                                        </div>
-                                                        <a
-                                                            href={message.url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="shrink-0 rounded-full p-1.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-                                                        >
-                                                            <Download className="h-4 w-4" />
-                                                        </a>
-                                                    </div>
+                                                <button
+                                                    onClick={() => copyToClipboard(message.content, message.id)}
+                                                    className={cn(
+                                                        "absolute -top-2 opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 rounded-full bg-background border border-border shadow-sm hover:scale-110",
+                                                        message.is_from_me ? "-left-2" : "-right-2"
+                                                    )}
+                                                >
+                                                    {copiedId === message.id ? (
+                                                        <Check className="h-3 w-3 text-green-500" />
+                                                    ) : (
+                                                        <Copy className="h-3 w-3 text-muted-foreground" />
+                                                    )}
+                                                </button>
+                                                {message.media_type ? (
+                                                    <a
+                                                        href={message.url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-1.5 text-xs font-medium opacity-70 hover:opacity-100 transition-opacity italic"
+                                                    >
+                                                        <Download className="h-3 w-3" />
+                                                        {message.media_type}
+                                                    </a>
                                                 ) : (
                                                     <p className="whitespace-pre-wrap leading-relaxed">{highlightText(message.content, search)}</p>
                                                 )}
@@ -368,12 +447,19 @@ export default function Show({ chat, messages, files, files_count, filters, late
                                             Lihat Semua Berkas
                                         </Button>
                                     </DialogTrigger>
-                                    <DialogContent className="h-[500px] w-[700px] max-w-none flex flex-col">
-                                        <DialogHeader>
-                                            <DialogTitle>Semua Berkas</DialogTitle>
-                                            <DialogDescription>
-                                                Daftar seluruh berkas yang dikirim dalam percakapan ini.
-                                            </DialogDescription>
+                                    <DialogContent className="h-[500px] w-[700px] max-w-none flex flex-col [&>button]:hidden">
+                                        <DialogHeader className="flex flex-row items-center justify-between">
+                                            <div className="space-y-1.5">
+                                                <DialogTitle>Semua Berkas</DialogTitle>
+                                                <DialogDescription>
+                                                    Daftar seluruh berkas yang dikirim dalam percakapan ini.
+                                                </DialogDescription>
+                                            </div>
+                                            <DialogClose asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </DialogClose>
                                         </DialogHeader>
                                         <div className="flex-1 overflow-y-auto mt-4 pr-2">
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
@@ -405,6 +491,127 @@ export default function Show({ chat, messages, files, files_count, filters, late
                     </aside>
                 </div>
             </div>
+
+            {/* AI Floating Chat Bubble */}
+            <div className="fixed bottom-6 right-6 z-50">
+                <Button
+                    size="icon"
+                    className="h-14 w-14 rounded-full shadow-2xl bg-primary text-primary-foreground hover:scale-105 transition-transform duration-200"
+                    onClick={() => setIsAiChatOpen(true)}
+                >
+                    <Bot className="h-7 w-7" />
+                </Button>
+            </div>
+
+            {/* AI Assistant Dialog */}
+            <Dialog open={isAiChatOpen} onOpenChange={setIsAiChatOpen}>
+                <DialogContent className="sm:max-w-[450px] h-[600px] flex flex-col p-0 overflow-hidden border-none shadow-2xl [&>button]:hidden">
+                    <div className="bg-primary p-4 text-primary-foreground relative">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2 text-primary-foreground">
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20">
+                                    <Bot className="h-5 w-5" />
+                                </div>
+                                AI Assistant
+                            </DialogTitle>
+                        </DialogHeader>
+                        <DialogClose asChild>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="absolute top-4 right-4 h-8 w-8 rounded-full text-primary-foreground hover:bg-white/20 hover:text-primary-foreground"
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </DialogClose>
+                    </div>
+
+                    <div 
+                        ref={aiChatScrollRef}
+                        className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/30 scroll-smooth"
+                    >
+                        {aiMessages.map((msg, i) => (
+                            <div key={i} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
+                                <div className={cn(
+                                    "group relative p-3 rounded-2xl text-sm max-w-[85%] shadow-sm",
+                                    msg.role === 'user' 
+                                        ? "bg-primary text-primary-foreground rounded-tr-none" 
+                                        : "bg-background border border-border rounded-tl-none text-foreground"
+                                )}>
+                                    <button
+                                        onClick={() => copyToClipboard(msg.content, `ai-${i}`)}
+                                        className={cn(
+                                            "absolute -top-2 opacity-0 group-hover:opacity-100 transition-all duration-200 p-1.5 rounded-full bg-background border border-border shadow-sm hover:scale-110",
+                                            msg.role === 'user' ? "-left-2" : "-right-2"
+                                        )}
+                                    >
+                                        {copiedId === `ai-${i}` ? (
+                                            <Check className="h-3 w-3 text-green-500" />
+                                        ) : (
+                                            <Copy className="h-3 w-3 text-muted-foreground" />
+                                        )}
+                                    </button>
+                                    {msg.role === 'user' ? (
+                                        <p className="whitespace-pre-wrap">{msg.content}</p>
+                                    ) : (
+                                        <div className="markdown-content">
+                                            <ReactMarkdown 
+                                                remarkPlugins={[remarkGfm]}
+                                                components={{
+                                                    p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                                                    ul: ({node, ...props}) => <ul className="list-disc ml-4 mb-2" {...props} />,
+                                                    ol: ({node, ...props}) => <ol className="list-decimal ml-4 mb-2" {...props} />,
+                                                    li: ({node, ...props}) => <li className="mb-1" {...props} />,
+                                                    code: ({node, ...props}) => <code className="bg-muted px-1 py-0.5 rounded text-[11px] font-mono" {...props} />,
+                                                    pre: ({node, ...props}) => <pre className="bg-muted/50 p-2 rounded-lg my-2 overflow-x-auto border border-border font-mono text-[11px]" {...props} />,
+                                                    h1: ({node, ...props}) => <h1 className="text-base font-bold mb-2" {...props} />,
+                                                    h2: ({node, ...props}) => <h2 className="text-sm font-bold mb-2" {...props} />,
+                                                    h3: ({node, ...props}) => <h3 className="text-xs font-bold mb-1" {...props} />,
+                                                    a: ({node, ...props}) => <a className="text-primary underline hover:no-underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                                                    blockquote: ({node, ...props}) => <blockquote className="border-l-4 border-primary/20 pl-4 italic my-2" {...props} />,
+                                                }}
+                                            >
+                                                {msg.content}
+                                            </ReactMarkdown>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        
+                        {isAiLoading && (
+                            <div className="flex justify-start">
+                                <div className="bg-background border border-border p-3 rounded-2xl rounded-tl-none text-sm shadow-sm flex items-center gap-2">
+                                    <div className="flex gap-1">
+                                        <div className="h-1.5 w-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                        <div className="h-1.5 w-1.5 bg-muted-foreground/40 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                        <div className="h-1.5 w-1.5 bg-muted-foreground/40 rounded-full animate-bounce"></div>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">Berpikir...</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="p-4 border-t bg-background flex gap-2">
+                        <Input 
+                            placeholder="Tanya sesuatu tentang chat ini..." 
+                            className="flex-1 h-10 rounded-full bg-muted/50 border-none focus-visible:ring-1"
+                            value={aiInput}
+                            onChange={(e) => setAiInput(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSendAiMessage()}
+                        />
+                        <Button 
+                            size="icon" 
+                            className="h-10 w-10 rounded-full shrink-0"
+                            onClick={handleSendAiMessage}
+                            disabled={isAiLoading || !aiInput.trim()}
+                        >
+                            <Send className="h-4 w-4" />
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

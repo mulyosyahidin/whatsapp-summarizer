@@ -1,7 +1,8 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Activity, Clock, Database, Eye, Filter, RefreshCcw, Search, ShieldAlert } from 'lucide-react';
+import { Activity, Clock, Database, Eye, Filter, RefreshCcw, Search, ShieldAlert, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/pagination';
 import {
     Dialog,
     DialogContent,
@@ -14,33 +15,24 @@ import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 import jobsRoutes from '@/routes/jobs';
 import { cn } from '@/lib/utils';
-
-interface Job {
-    id: number;
-    queue: string;
-    display_name: string;
-    attempts: number;
-    available_at: string;
-    created_at: string;
-    status: 'pending' | 'failed';
-    uuid?: string;
-    failed_at?: string;
-}
+import { Job, PaginatedResult } from '@/types';
 
 export default function Index({
     jobs,
     failedJobs,
 }: {
-    jobs: Job[];
-    failedJobs: Job[];
+    jobs: PaginatedResult<Job>;
+    failedJobs: PaginatedResult<Job>;
 }) {
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'pending' | 'failed'>('pending');
     const [jobToRetry, setJobToRetry] = useState<Job | null>(null);
+    const [jobToDelete, setJobToDelete] = useState<Job | null>(null);
     const [isRetryAllDialogOpen, setIsRetryAllDialogOpen] = useState(false);
     const [isRetrying, setIsRetrying] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
-    const filteredJobs = (activeTab === 'pending' ? jobs : failedJobs).filter(
+    const filteredJobs = (activeTab === 'pending' ? jobs.data : failedJobs.data).filter(
         (job) =>
             job.display_name.toLowerCase().includes(search.toLowerCase()) ||
             job.queue.toLowerCase().includes(search.toLowerCase())
@@ -57,7 +49,7 @@ export default function Index({
                             <Activity className="h-5 w-5 text-muted-foreground" />
                             <p className="text-base font-medium text-foreground">Background Jobs</p>
                         </div>
-                        {activeTab === 'failed' && failedJobs.length > 0 && (
+                        {activeTab === 'failed' && failedJobs.meta.total > 0 && (
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -79,7 +71,7 @@ export default function Index({
                                 onClick={() => setActiveTab('pending')}
                                 className="h-7 text-xs"
                             >
-                                Pending ({jobs.length})
+                                Pending ({jobs.meta.total})
                             </Button>
                             <Button
                                 variant={activeTab === 'failed' ? 'secondary' : 'ghost'}
@@ -87,7 +79,7 @@ export default function Index({
                                 onClick={() => setActiveTab('failed')}
                                 className="h-7 text-xs"
                             >
-                                Failed ({failedJobs.length})
+                                Failed ({failedJobs.meta.total})
                             </Button>
                         </div>
 
@@ -165,6 +157,15 @@ export default function Index({
                                                             <RefreshCcw className="h-4 w-4" />
                                                         </Button>
                                                     )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 rounded-full text-destructive hover:text-destructive hover:bg-red-50"
+                                                        onClick={() => setJobToDelete(job)}
+                                                        title={activeTab === 'pending' ? "Cancel Job" : "Remove Job"}
+                                                    >
+                                                        {activeTab === 'pending' ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
+                                                    </Button>
                                                     <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full" asChild title="Detail">
                                                         <Link href={jobsRoutes.show({ type: activeTab, id: job.id }).url}>
                                                             <Eye className="h-4 w-4" />
@@ -176,6 +177,7 @@ export default function Index({
                                     </tbody>
                                 </table>
                             </div>
+                            <Pagination meta={activeTab === 'pending' ? jobs.meta : failedJobs.meta} />
                         </div>
                     )}
                 </div>
@@ -221,7 +223,7 @@ export default function Index({
                     <DialogHeader>
                         <DialogTitle>Retry Semua Job</DialogTitle>
                         <DialogDescription>
-                            Apakah Anda yakin ingin mencoba menjalankan kembali <strong>semua ({failedJobs.length})</strong> job yang gagal? 
+                            Apakah Anda yakin ingin mencoba menjalankan kembali <strong>semua ({failedJobs.meta.total})</strong> job yang gagal? 
                             Semua job ini akan dimasukkan kembali ke dalam antrean.
                         </DialogDescription>
                     </DialogHeader>
@@ -244,6 +246,41 @@ export default function Index({
                         >
                             {isRetrying && <RefreshCcw className="h-4 w-4 animate-spin" />}
                             Ya, Jalankan Semua
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={!!jobToDelete} onOpenChange={(open) => !open && setJobToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{activeTab === 'pending' ? 'Batalkan Job' : 'Hapus Job'}</DialogTitle>
+                        <DialogDescription>
+                            Apakah Anda yakin ingin {activeTab === 'pending' ? 'membatalkan' : 'menghapus'} job <strong>{jobToDelete?.display_name}</strong>? 
+                            Tindakan ini tidak dapat dibatalkan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setJobToDelete(null)} disabled={isDeleting}>
+                            Batal
+                        </Button>
+                        <Button 
+                            variant="destructive"
+                            onClick={() => {
+                                if (jobToDelete) {
+                                    setIsDeleting(true);
+                                    router.delete(jobsRoutes.destroy({ type: activeTab, id: jobToDelete.id }).url, {
+                                        onFinish: () => {
+                                            setIsDeleting(false);
+                                            setJobToDelete(null);
+                                        }
+                                    });
+                                }
+                            }} 
+                            disabled={isDeleting}
+                            className="gap-2"
+                        >
+                            {isDeleting && <RefreshCcw className="h-4 w-4 animate-spin" />}
+                            Ya, Hapus
                         </Button>
                     </DialogFooter>
                 </DialogContent>

@@ -9,6 +9,7 @@ use App\Jobs\SyncChatMessages;
 use App\Models\Chat;
 use App\Services\ChatService;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ChatController extends Controller
 {
@@ -51,7 +52,7 @@ class ChatController extends Controller
             $query->reorder($column, $sortOrder === 'desc' ? 'desc' : 'asc');
         }
 
-        return inertia('chats/index', [
+        return Inertia::render('chats/index', [
             'chats' => ChatResource::collection($query->paginate($request->input('limit', 10))->withQueryString()),
             'filters' => $request->only(['search', 'status', 'limit', 'sort_by', 'sort_order']),
         ]);
@@ -74,13 +75,15 @@ class ChatController extends Controller
             return redirect()->route('chats.show', ['chat' => $chat->id, 'page' => $messages->lastPage()]);
         }
 
-        return inertia('chats/show', [
+        return Inertia::render('chats/show', [
             'chat' => (new ChatResource($chat))->resolve(),
             'messages' => ChatMessageResource::collection($messages),
             'files' => ChatFileResource::collection($chat->files()->latest('timestamp')->paginate(10, ['*'], 'files_page')->withQueryString()),
             'files_count' => $chat->files()->count(),
+            'pending_messages_count' => max(0, $this->chatService->getApiMessagesCount($chat) - $chat->messages()->count()),
             'filters' => $request->only(['search']),
             'latest_summary' => $chat->latestSummary,
+            'ai_messages' => $chat->aiChatMessages()->oldest()->get(['role', 'content']),
         ]);
     }
 
