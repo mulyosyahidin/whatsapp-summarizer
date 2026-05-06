@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { MessageSquare, MoreHorizontal, RefreshCw, Search, Trash2, User } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, DatabaseZap, MessageSquare, MoreHorizontal, RefreshCw, Search, Trash2, User, X } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,8 @@ import { type Chat, type PaginatedResult } from '@/types';
 export interface ChatFilters {
     search?: string;
     status?: string;
+    sort_by?: string;
+    sort_order?: 'asc' | 'desc';
 }
 
 const FILTER_TABS: { key: string; label: string }[] = [
@@ -53,6 +55,8 @@ export default function Index({
     const [query, setQuery] = useState(filters.search ?? '');
     const [isSyncing, setIsSyncing] = useState(false);
     const [showSyncConfirm, setShowSyncConfirm] = useState(false);
+    const [isSyncingAll, setIsSyncingAll] = useState(false);
+    const [showSyncAllConfirm, setShowSyncAllConfirm] = useState(false);
 
     function applyFilter(status: string) {
         router.get(
@@ -82,6 +86,34 @@ export default function Index({
         });
     };
 
+    const handleSort = (column: string) => {
+        const isCurrent = filters.sort_by === column;
+        const nextOrder = isCurrent && filters.sort_order === 'asc' ? 'desc' : 'asc';
+        
+        router.get(
+            chats.index().url,
+            { ...filters, sort_by: column, sort_order: nextOrder, page: 1 },
+            { preserveState: true, replace: true },
+        );
+    };
+
+    const SortIcon = ({ column }: { column: string }) => {
+        if (filters.sort_by !== column) return <ArrowUpDown className="ml-1 h-3 w-3 opacity-30" />;
+        return filters.sort_order === 'asc' 
+            ? <ArrowUp className="ml-1 h-3 w-3 text-primary" /> 
+            : <ArrowDown className="ml-1 h-3 w-3 text-primary" />;
+    };
+
+    const handleSyncAll = () => {
+        setIsSyncingAll(true);
+        router.post(chats.syncAll().url, {}, {
+            onFinish: () => {
+                setIsSyncingAll(false);
+                setShowSyncAllConfirm(false);
+            },
+        });
+    };
+
     return (
         <>
             <Head title="Chats" />
@@ -89,22 +121,41 @@ export default function Index({
             <div className="mx-2 my-2 flex flex-1 flex-col rounded-lg border border-border bg-background min-w-0">
                 <header className="flex flex-col border-b border-border/40">
                     <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                        <p className="text-base font-medium text-foreground">WhatsApp Chats</p>
+                        <div className="flex items-center gap-2">
+                            <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                            <p className="text-base font-medium text-foreground">WhatsApp Chats</p>
+                        </div>
                         <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7 rounded-full"
-                                        onClick={() => setShowSyncConfirm(true)}
-                                        disabled={isSyncing}
-                                    >
-                                        <RefreshCw className={cn('h-4 w-4 text-muted-foreground', isSyncing && 'animate-spin')} />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>Sinkronisasi Chat</TooltipContent>
-                            </Tooltip>
+                            <div className="flex items-center gap-1">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 rounded-full"
+                                            onClick={() => setShowSyncConfirm(true)}
+                                            disabled={isSyncing || isSyncingAll}
+                                        >
+                                            <RefreshCw className={cn('h-4 w-4 text-muted-foreground', isSyncing && 'animate-spin')} />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Sinkronisasi Chat</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 rounded-full"
+                                            onClick={() => setShowSyncAllConfirm(true)}
+                                            disabled={isSyncing || isSyncingAll}
+                                        >
+                                            <DatabaseZap className={cn('h-4 w-4 text-muted-foreground', isSyncingAll && 'animate-pulse')} />
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Sync Semua (Chat + Pesan)</TooltipContent>
+                                </Tooltip>
+                            </div>
                         </TooltipProvider>
                     </div>
 
@@ -158,8 +209,34 @@ export default function Index({
                                             <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground w-10 text-center">#</th>
                                             <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Kontak</th>
                                             <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">JID</th>
-                                            <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground">Terakhir Dilihat</th>
-                                            <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground w-36">Status</th>
+                                            <th 
+                                                className="px-4 py-2.5 text-xs font-medium text-muted-foreground w-20 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+                                                onClick={() => handleSort('messages')}
+                                             >
+                                                <div className="flex items-center justify-center">
+                                                    Pesan
+                                                    <SortIcon column="messages" />
+                                                </div>
+                                             </th>
+                                             <th 
+                                                className="px-4 py-2.5 text-xs font-medium text-muted-foreground w-20 text-center cursor-pointer hover:bg-muted/50 transition-colors"
+                                                onClick={() => handleSort('summary')}
+                                             >
+                                                <div className="flex items-center justify-center">
+                                                    Summary
+                                                    <SortIcon column="summary" />
+                                                </div>
+                                             </th>
+                                             <th 
+                                                className="px-4 py-2.5 text-xs font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 transition-colors"
+                                                onClick={() => handleSort('last_seen')}
+                                             >
+                                                <div className="flex items-center">
+                                                    Terakhir Dilihat
+                                                    <SortIcon column="last_seen" />
+                                                </div>
+                                             </th>
+                                             <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground w-36">Status</th>
                                             <th className="px-4 py-2.5 text-xs font-medium text-muted-foreground text-right w-16">Aksi</th>
                                         </tr>
                                     </thead>
@@ -181,6 +258,20 @@ export default function Index({
                                                 </td>
                                                 <td className="px-4 py-3 font-mono text-[11px] text-muted-foreground">
                                                     {chat.jid}
+                                                </td>
+                                                <td className="px-4 py-3 text-center text-xs font-mono text-muted-foreground">
+                                                    {chat.messages_count}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    {chat.has_summary ? (
+                                                        <div className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-600">
+                                                            <Check className="h-3 w-3" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-red-100 text-red-600">
+                                                            <X className="h-3 w-3" />
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3 text-xs text-muted-foreground">
                                                     {chat.last_message_time ? new Date(chat.last_message_time).toLocaleString() : '—'}
@@ -245,6 +336,25 @@ export default function Index({
                         </Button>
                         <Button onClick={handleSync} disabled={isSyncing}>
                             {isSyncing ? 'Sinkronisasi...' : 'Ya, Sinkronkan'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={showSyncAllConfirm} onOpenChange={setShowSyncAllConfirm}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Sync Semua Chat &amp; Pesan</DialogTitle>
+                        <DialogDescription>
+                            Proses ini akan menyinkronkan seluruh daftar chat terlebih dahulu, kemudian menjadwalkan sinkronisasi pesan dan file untuk setiap chat di background (queue). Pastikan queue worker sedang berjalan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setShowSyncAllConfirm(false)} disabled={isSyncingAll}>
+                            Batal
+                        </Button>
+                        <Button onClick={handleSyncAll} disabled={isSyncingAll}>
+                            {isSyncingAll ? 'Memproses...' : 'Ya, Sync Semua'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

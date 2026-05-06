@@ -19,8 +19,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [ChatController::class, 'index'])->name('index');
         Route::get('{chat}', [ChatController::class, 'show'])->name('show');
         Route::post('sync', [ChatController::class, 'sync'])->name('sync');
+        Route::post('sync-all', [ChatController::class, 'syncAll'])->name('sync-all');
         Route::post('{chat}/sync', [ChatMessageController::class, 'sync'])->name('messages.sync');
         Route::post('{chat}/summarize', [ChatSummaryController::class, 'store'])->name('summarize');
+
     });
 
     Route::prefix('contacts')->name('contacts.')->group(function () {

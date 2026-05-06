@@ -21,6 +21,8 @@ class ChatResource extends JsonResource
             'last_message_time' => $this->last_message_time,
             'ephemeral_expiration' => $this->ephemeral_expiration,
             'archived' => $this->archived,
+            'messages_count' => $this->messages_count,
+            'has_summary' => $this->summaries_exists,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

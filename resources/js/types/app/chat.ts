@@ -5,6 +5,8 @@ export interface Chat {
     last_message_time: string | null;
     ephemeral_expiration: number;
     archived: boolean;
+    messages_count: number;
+    has_summary: boolean;
     created_at: string;
     updated_at: string;
 }
