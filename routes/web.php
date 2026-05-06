@@ -3,6 +3,7 @@
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ChatMessageController;
 use App\Http\Controllers\ChatSummaryController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
@@ -11,11 +12,15 @@ Route::inertia('/', 'welcome', [
 ])->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
-    Route::resource('chats', ChatController::class)->only(['index', 'show']);
-    Route::post('chats/sync', [ChatController::class, 'sync'])->name('chats.sync');
-    Route::post('chats/{chat}/sync', [ChatMessageController::class, 'sync'])->name('chats.messages.sync');
-    Route::post('chats/{chat}/summarize', [ChatSummaryController::class, 'store'])->name('chats.summarize');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::prefix('chats')->name('chats.')->group(function () {
+        Route::get('/', [ChatController::class, 'index'])->name('index');
+        Route::get('{chat}', [ChatController::class, 'show'])->name('show');
+        Route::post('sync', [ChatController::class, 'sync'])->name('sync');
+        Route::post('{chat}/sync', [ChatMessageController::class, 'sync'])->name('messages.sync');
+        Route::post('{chat}/summarize', [ChatSummaryController::class, 'store'])->name('summarize');
+    });
 });
 
 require __DIR__.'/settings.php';
