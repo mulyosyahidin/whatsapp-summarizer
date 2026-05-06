@@ -8,3 +8,29 @@ export interface Chat {
     created_at: string;
     updated_at: string;
 }
+
+export interface ChatMessage {
+    id: string;
+    chat_jid: string;
+    sender_jid: string;
+    content: string;
+    timestamp: string;
+    is_from_me: boolean;
+    media_type: string;
+    filename: string;
+    url: string;
+    file_length: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface ChatFile {
+    id: number;
+    chat_message_id: string;
+    chat_jid: string;
+    filename: string;
+    url: string;
+    media_type: string;
+    file_length: number;
+    timestamp: string;
+}

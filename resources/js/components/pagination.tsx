@@ -53,7 +53,7 @@ export function Pagination({ meta }: Props) {
                         disabled={!prevPageUrl}
                     >
                         {prevPageUrl ? (
-                            <Link href={prevPageUrl as string} preserveScroll>
+                            <Link href={prevPageUrl as string} preserveScroll preserveState>
                                 ‹
                             </Link>
                         ) : (
@@ -69,7 +69,7 @@ export function Pagination({ meta }: Props) {
                         disabled={!nextPageUrl}
                     >
                         {nextPageUrl ? (
-                            <Link href={nextPageUrl as string} preserveScroll>
+                            <Link href={nextPageUrl as string} preserveScroll preserveState>
                                 ›
                             </Link>
                         ) : (
@@ -94,7 +94,7 @@ export function Pagination({ meta }: Props) {
                             disabled={meta.current_page === 1}
                         >
                             {meta.current_page > 1 ? (
-                                <Link href={firstPageUrl as string} preserveScroll>
+                                <Link href={firstPageUrl as string} preserveScroll preserveState>
                                     «
                                 </Link>
                             ) : (
@@ -109,7 +109,7 @@ export function Pagination({ meta }: Props) {
                             disabled={!prevPageUrl}
                         >
                             {prevPageUrl ? (
-                                <Link href={prevPageUrl as string} preserveScroll>
+                                <Link href={prevPageUrl as string} preserveScroll preserveState>
                                     ‹
                                 </Link>
                             ) : (
@@ -132,9 +132,9 @@ export function Pagination({ meta }: Props) {
                                     disabled={!link.url}
                                 >
                                     {link.url ? (
-                                        <Link href={link.url as string} preserveScroll>
-                                            {link.label}
-                                        </Link>
+                                    <Link href={link.url as string} preserveScroll preserveState>
+                                        {link.label}
+                                    </Link>
                                     ) : (
                                         <span>{link.label}</span>
                                     )}
@@ -150,7 +150,7 @@ export function Pagination({ meta }: Props) {
                             disabled={!nextPageUrl}
                         >
                             {nextPageUrl ? (
-                                <Link href={nextPageUrl as string} preserveScroll>
+                                <Link href={nextPageUrl as string} preserveScroll preserveState>
                                     ›
                                 </Link>
                             ) : (
@@ -165,7 +165,7 @@ export function Pagination({ meta }: Props) {
                             disabled={meta.current_page === meta.last_page}
                         >
                             {meta.current_page < meta.last_page ? (
-                                <Link href={lastPageUrl as string} preserveScroll>
+                                <Link href={lastPageUrl as string} preserveScroll preserveState>
                                     »
                                 </Link>
                             ) : (

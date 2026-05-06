@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ChatFileResource;
+use App\Http\Resources\ChatMessageResource;
 use App\Http\Resources\ChatResource;
 use App\Models\Chat;
 use Illuminate\Http\Request;
@@ -10,6 +12,32 @@ use Illuminate\Support\Facades\Http;
 
 class ChatController extends Controller
 {
+    /**
+     * Display the specified resource.
+     */
+    public function show(Request $request, Chat $chat)
+    {
+        $query = $chat->messages()->oldest('timestamp');
+
+        if ($request->filled('search')) {
+            $query->where('content', 'like', "%{$request->search}%");
+        }
+
+        $messages = $query->paginate(50)->withQueryString();
+
+        if (! $request->has('page') && ! $request->has('search') && $messages->lastPage() > 1) {
+            return redirect()->route('chats.show', ['chat' => $chat->id, 'page' => $messages->lastPage()]);
+        }
+
+        return inertia('chats/show', [
+            'chat' => (new ChatResource($chat))->resolve(),
+            'messages' => ChatMessageResource::collection($messages),
+            'files' => ChatFileResource::collection($chat->files()->latest('timestamp')->paginate(10, ['*'], 'files_page')->withQueryString()),
+            'files_count' => $chat->files()->count(),
+            'filters' => $request->only(['search']),
+        ]);
+    }
+
     public function sync()
     {
         $offset = 0;
@@ -113,14 +141,6 @@ class ChatController extends Controller
      * Store a newly created resource in storage.
      */
     public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Chat $chat)
     {
         //
     }
