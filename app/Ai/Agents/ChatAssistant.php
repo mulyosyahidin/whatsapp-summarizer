@@ -2,6 +2,7 @@
 
 namespace App\Ai\Agents;
 
+use Illuminate\Support\Carbon;
 use Laravel\Ai\Contracts\Agent;
 use Laravel\Ai\Contracts\Conversational;
 use Laravel\Ai\Messages\Message;
@@ -47,7 +48,7 @@ class ChatAssistant implements Agent, Conversational
         return array_map(
             fn ($m) => new Message(
                 role: $m['is_from_me'] ? 'assistant' : 'user',
-                content: "[{$m['timestamp']}] {$m['sender']}: {$m['content']}",
+                content: '['.Carbon::parse($m['timestamp'])->timezone('Asia/Jakarta')->format('Y-m-d H:i:s')."] {$m['sender']}: {$m['content']}",
             ),
             $this->messages,
         );
