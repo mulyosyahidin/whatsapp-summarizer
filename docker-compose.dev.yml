@@ -1,0 +1,41 @@
+services:
+  mysql:
+    image: 'mysql:8.4'
+    ports:
+      - '${FORWARD_DB_PORT:-3307}:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: '${DB_PASSWORD:-password}'
+      MYSQL_DATABASE: '${DB_DATABASE:-db_wa_grab}'
+    volumes:
+      - 'wa-grab-mysql:/var/lib/mysql'
+    networks:
+      - wa-grab
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-p${DB_PASSWORD:-password}"]
+      retries: 3
+      timeout: 5s
+
+  whatsapp:
+    image: aldinokemal2104/go-whatsapp-web-multidevice
+    container_name: whatsapp
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - whatsapp:/app/storages
+    environment:
+      - APP_BASIC_AUTH=admin:admin
+      - APP_PORT=3000
+      - APP_DEBUG=true
+      - APP_OS=Chrome
+      - APP_ACCOUNT_VALIDATION=false
+
+networks:
+  wa-grab:
+    driver: bridge
+
+volumes:
+  wa-grab-mysql:
+    driver: local
+  whatsapp:
+    driver: local
